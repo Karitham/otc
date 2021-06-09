@@ -10,11 +10,11 @@ import (
 func TestGet(t *testing.T) {
 	cname := os.Getenv("CONTAINER_NAME")
 	if cname == "" {
-		t.Fatal("no name provided")
+		t.Skip("no name provided")
 	}
 	dbname := os.Getenv("DB_NAME")
 	if dbname == "" {
-		t.Fatal("no name provided")
+		t.Skip("no name provided")
 	}
 	dbuser := os.Getenv("DB_USER")
 	if dbuser == "" {

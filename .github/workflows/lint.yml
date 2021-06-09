@@ -5,6 +5,16 @@ on:
   pull_request:
 
 jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v1
+        name: test
+        with:
+          go-version: "^1.16"
+      - run: go test ./... -cover -v
   golangci:
     name: lint
     runs-on: ubuntu-latest
