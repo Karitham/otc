@@ -7,9 +7,16 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/Karitham/otc/source"
 	"github.com/rs/zerolog/log"
 )
 
+// check impl
+var _ = source.Getter((*Config)(nil))
+
+// Config is the configuration of the getter,
+// for our particular case, it's this simple struct but it could be
+// larger depending on needs
 type Config struct {
 	ContainerName string
 	DbName        string
@@ -21,7 +28,6 @@ type Config struct {
 // **Don't forget to close the resulting file**
 func (c *Config) Get(ctx context.Context) (io.ReadCloser, error) {
 	dumpCommand := fmt.Sprintf("pg_dump -U %s -d %s", c.DbUser, c.DbName)
-
 	log.Trace().Str("docker_command", dumpCommand).Msg("running command")
 
 	f, err := os.CreateTemp(os.TempDir(), c.ContainerName+"-*")
@@ -36,12 +42,13 @@ func (c *Config) Get(ctx context.Context) (io.ReadCloser, error) {
 	if err = cmd.Run(); err != nil {
 		return nil, fmt.Errorf("pgdocker: running command %w", err)
 	}
+	log.Trace().Msg("command ran successfully")
 
 	_, err = f.Seek(0, 0)
-
 	return f, err
 }
 
+// New returns a new pgdocker config object
 func New(ContainerName, DbName, DbUser string) *Config {
 	return &Config{
 		ContainerName: ContainerName,
