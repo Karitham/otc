@@ -1,4 +1,4 @@
-package command
+package cmd
 
 import (
 	"context"
@@ -7,7 +7,10 @@ import (
 )
 
 func TestGet(t *testing.T) {
-	c := New("echo", "hello world")
+	c := Args{
+		args:    []string{"hello world"},
+		command: "echo",
+	}
 
 	r, err := c.Get(context.Background())
 	if err != nil {

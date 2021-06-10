@@ -42,7 +42,7 @@ func TestClient_Store(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Client{
+			c := &Args{
 				Hook:     tt.fields.Hook,
 				Filename: tt.fields.Filename,
 			}

@@ -1,6 +1,8 @@
 package storage
 
-import "io"
+import (
+	"io"
+)
 
 type Storer interface {
 	Store(io.Reader) error
