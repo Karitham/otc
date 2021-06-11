@@ -11,22 +11,26 @@ type CtxKey struct{}
 
 var K CtxKey = CtxKey{}
 
-// A Runner runs the final function
-type Runner interface {
-	Run(context.Context, source.Getter, storage.Storer) error
+// A Wither runs the final function
+type Wither interface {
+	With(m ...Middleware) Wither
 }
+
+type RunnerFunc = func(context.Context, source.Getter, storage.Storer) error
+
+type Middleware = func(RunnerFunc) RunnerFunc
 
 // Default is a default runner.
 // It's used to wrapper runners inside middlewares
 type Default struct {
 	getter      source.Getter
 	storer      storage.Storer
-	runner      Runner
-	middlewares []func(Runner) Runner
+	runner      RunnerFunc
+	middlewares []Middleware
 }
 
 // Runner sets the default runner
-func (d *Default) Runner(r Runner) *Default {
+func (d *Default) Runner(r RunnerFunc) *Default {
 	d.runner = r
 	return d
 }
@@ -44,15 +48,26 @@ func (d *Default) Getter(g source.Getter) *Default {
 }
 
 // With adds a middleware at the end of the chain
-func (d *Default) With(m ...func(Runner) Runner) *Default {
+func (d *Default) With(m ...Middleware) *Default {
 	d.middlewares = append(d.middlewares, m...)
+	return d
+}
+
+func FromCtx(ctx context.Context) *Default {
+	d, ok := ctx.Value(K).(*Default)
+	if !ok {
+		return nil
+	}
 	return d
 }
 
 // Run applies the middlewares then runs the command
 func (d *Default) Run(ctx context.Context) error {
+	if d.runner == nil {
+		return nil
+	}
 	if len(d.middlewares) == 0 {
-		return d.runner.Run(ctx, d.getter, d.storer)
+		return d.runner(ctx, d.getter, d.storer)
 	}
 
 	m := d.middlewares[len(d.middlewares)-1](d.runner)
@@ -60,10 +75,5 @@ func (d *Default) Run(ctx context.Context) error {
 		m = d.middlewares[i](m)
 	}
 
-	return m.Run(ctx, d.getter, d.storer)
+	return m(ctx, d.getter, d.storer)
 }
-
-// NoOp is a NoOp runner
-type NoOp struct{}
-
-func (NoOp) Run(context.Context, source.Getter, storage.Storer) error { return nil }

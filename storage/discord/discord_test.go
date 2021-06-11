@@ -17,7 +17,7 @@ func TestClient_Store(t *testing.T) {
 
 	type fields struct {
 		Hook     *webhook.Hook
-		Filename string
+		filename string
 	}
 	type args struct {
 		file io.Reader
@@ -34,7 +34,7 @@ func TestClient_Store(t *testing.T) {
 			},
 			fields: fields{
 				Hook:     webhook.New(url),
-				Filename: "hello_world.txt",
+				filename: "hello_world.txt",
 			},
 			name:    "hello world test",
 			wantErr: false,
@@ -44,7 +44,7 @@ func TestClient_Store(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Args{
 				Hook:     tt.fields.Hook,
-				Filename: tt.fields.Filename,
+				filename: tt.fields.filename,
 			}
 			if err := c.Store(tt.args.file); (err != nil) != tt.wantErr {
 				t.Errorf("Client.Store() error = %v, wantErr %v", err, tt.wantErr)

@@ -1,13 +1,11 @@
 package dropbox
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"time"
 
 	"github.com/Karitham/otc/runner"
-	"github.com/rs/zerolog/log"
 	"github.com/tj/go-dropbox"
 	"github.com/tj/go-dropy"
 	"github.com/urfave/cli/v2"
@@ -15,9 +13,12 @@ import (
 
 // Args holds all that's required to upload to dropbox
 type Args struct {
-	DP       *dropy.Client
+	DP *dropy.Client
+
+	// flags
 	filename string
 	token    string
+	timeout  time.Duration
 }
 
 func Command() *cli.Command {
@@ -31,19 +32,13 @@ func Command() *cli.Command {
 				dropbox.New(
 					&dropbox.Config{
 						HTTPClient: &http.Client{
-							Timeout: 5 * time.Minute,
+							Timeout: args.timeout,
 						}, AccessToken: args.token,
 					},
 				),
 			)
 
-			m, ok := c.Context.Value(runner.K).(*runner.Default)
-			if !ok {
-				log.Error().Msg("Invalid runner provided")
-				c.Done()
-			}
-
-			c.Context = context.WithValue(c.Context, runner.K, m.Storer(args))
+			runner.FromCtx(c.Context).Storer(args)
 			return nil
 		},
 		Action: func(*cli.Context) error { return nil },
@@ -60,6 +55,11 @@ func Command() *cli.Command {
 				Aliases:     []string{"t"},
 				EnvVars:     []string{"DROPBOX_TOKEN"},
 				Destination: &args.token,
+			},
+			&cli.DurationFlag{
+				Name:        "timeout",
+				Value:       5 * time.Minute,
+				Destination: &args.timeout,
 			},
 		},
 	}

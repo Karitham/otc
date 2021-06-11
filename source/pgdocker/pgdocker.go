@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/Karitham/otc/runner"
 	"github.com/Karitham/otc/source"
@@ -32,12 +33,7 @@ func Command() *cli.Command {
 		Name:  "pgdocker",
 		Usage: "run a pg_dump in a docker container",
 		Before: func(c *cli.Context) error {
-			m, ok := c.Context.Value(runner.K).(*runner.Default)
-			if !ok {
-				log.Error().Msg("Invalid runner provided")
-				c.Done()
-			}
-			c.Context = context.WithValue(c.Context, runner.K, m.Getter(args))
+			runner.FromCtx(c.Context).Getter(args)
 			return nil
 		},
 		Action: func(*cli.Context) error { return nil },
@@ -69,7 +65,7 @@ func Command() *cli.Command {
 // **Don't forget to close the resulting file**
 func (a *Args) Get(ctx context.Context) (io.ReadCloser, error) {
 	dumpCommand := fmt.Sprintf("pg_dump -U %s -d %s", a.DbUser, a.DbName)
-	log.Trace().Str("docker_command", dumpCommand).Msg("running command")
+	log.Trace().Str("docker_command", dumpCommand).Str("container_name", a.ContainerName).Msg("running command")
 
 	f, err := os.CreateTemp(os.TempDir(), a.ContainerName+"-*")
 	if err != nil {
@@ -80,12 +76,26 @@ func (a *Args) Get(ctx context.Context) (io.ReadCloser, error) {
 	cmd.Stderr = f
 	cmd.Stdout = f
 
-	if err = cmd.Run(); err != nil {
-		return nil, fmt.Errorf("pgdocker: running command %w", err)
+	cmdErr := cmd.Run()
+
+	_, err = f.Seek(0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	if cmdErr != nil {
+		buf := make([]byte, 2048)
+		_, readErr := f.Read(buf)
+		str := strings.Trim(string(buf), "\x00")
+
+		if readErr != nil && readErr != io.EOF {
+			return nil, fmt.Errorf("pgdocker: running command %w", cmdErr)
+		}
+
+		return nil, fmt.Errorf("pgdocker: running command %w. Output: %s", cmdErr, str)
 	}
 	log.Trace().Msg("command ran successfully")
 
-	_, err = f.Seek(0, 0)
 	return f, err
 }
 
