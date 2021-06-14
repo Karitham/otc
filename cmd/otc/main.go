@@ -10,7 +10,6 @@ import (
 	"github.com/Karitham/otc/runner/once"
 	"github.com/Karitham/otc/runner/periodic"
 	command "github.com/Karitham/otc/source/cmd"
-	"github.com/Karitham/otc/source/pgdocker"
 	"github.com/Karitham/otc/source/stdin"
 	"github.com/Karitham/otc/storage/discord"
 	"github.com/Karitham/otc/storage/dropbox"
@@ -24,7 +23,6 @@ import (
 func main() {
 	otc := cmd.OTC{}
 	otc.RegisterGetter(
-		pgdocker.Command(),
 		command.Command(),
 		stdin.Command(),
 	)
