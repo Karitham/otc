@@ -9,7 +9,6 @@ import (
 	"github.com/Karitham/otc/cmd"
 	"github.com/Karitham/otc/runner"
 	"github.com/Karitham/otc/source"
-	"github.com/Karitham/otc/storage"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 )
@@ -20,7 +19,7 @@ func Command() cmd.Middleware {
 	return cmd.Middleware{
 		Func: func(bf cli.BeforeFunc) cli.BeforeFunc {
 			return func(c *cli.Context) error {
-				runner.FromCtx(c.Context).With(g.Compress)
+				runner.FromCtx(c.Context).GetterWith(g.Compress(c.Context))
 				return bf(c)
 			}
 		},
@@ -51,33 +50,36 @@ type Gzip struct {
 }
 
 // Compress implements a simple flate middleware
-func (g *Gzip) Compress(r runner.RunnerFunc) runner.RunnerFunc {
-	return func(ctx context.Context, get source.Getter, s storage.Storer) error {
+func (g *Gzip) Compress(ctx context.Context) func(getter source.Getter) source.Getter {
+	return func(getter source.Getter) source.Getter {
 		if !g.enabled {
-			return r(ctx, get, s)
+			return getter
 		}
-
 		log.Trace().Msg("Entered gz middleware")
 
 		buf := &bytes.Buffer{}
 
-		got, err := get.Get(ctx)
+		got, err := getter.Get(ctx)
 		if err != nil {
-			return err
+			return getter
 		}
 		defer got.Close()
 
 		gz, err := gzip.NewWriterLevel(buf, g.level)
 		if err != nil {
-			return err
+			return getter
 		}
-		io.Copy(gz, got)
+		_, err = io.Copy(gz, got)
+		if err != nil {
+			return getter
+		}
 		gz.Close()
 
 		g.r = io.NopCloser(buf)
 
 		log.Trace().Msg("Left gz middleware")
-		return r(ctx, g, s)
+
+		return g
 	}
 }
 

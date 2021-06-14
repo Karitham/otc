@@ -51,6 +51,7 @@ func (a *Args) Run(ctx context.Context, g source.Getter, s storage.Storer) error
 		if err := getStore(ctx, g, s); err != nil {
 			return err
 		}
+		log.Info().Msg("data retrieved and stored")
 	}
 
 	return nil

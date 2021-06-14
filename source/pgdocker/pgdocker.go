@@ -54,6 +54,7 @@ func Command() *cli.Command {
 			&cli.StringFlag{
 				Name:        "container",
 				Aliases:     []string{"c"},
+				EnvVars:     []string{"CONTAINER_NAME"},
 				Destination: &args.ContainerName,
 			},
 		},

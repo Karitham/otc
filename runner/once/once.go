@@ -41,6 +41,8 @@ func (a *Args) Run(ctx context.Context, g source.Getter, s storage.Storer) error
 		return err
 	}
 
+	log.Info().Msg("data retrieved and stored")
+
 	return nil
 }
 

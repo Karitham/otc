@@ -41,7 +41,7 @@ func main() {
 		compress.Command(),
 	)
 
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "15:04:05"})
 	log.Logger = log.Level(zerolog.InfoLevel)
 	var verbose bool
 
