@@ -33,6 +33,6 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           builder: ${{ steps.buildx.outputs.name }}
-          tags: ghcr.io/karitham/otc:postgres
+          tags: ghcr.io/karitham/otc
           cache-from: type=registry,ref=karitham/otc
           cache-to: type=inline
