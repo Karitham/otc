@@ -4,12 +4,12 @@ import (
 	"context"
 	"os"
 
-	"github.com/Karitham/otc/cmd"
+	command "github.com/Karitham/otc/cmd"
 	"github.com/Karitham/otc/middlewares/compress"
 	"github.com/Karitham/otc/runner"
 	"github.com/Karitham/otc/runner/once"
 	"github.com/Karitham/otc/runner/periodic"
-	command "github.com/Karitham/otc/source/cmd"
+	"github.com/Karitham/otc/source/cmd"
 	"github.com/Karitham/otc/source/stdin"
 	"github.com/Karitham/otc/storage/discord"
 	"github.com/Karitham/otc/storage/dropbox"
@@ -21,9 +21,9 @@ import (
 )
 
 func main() {
-	otc := cmd.OTC{}
+	otc := command.OTC{}
 	otc.RegisterGetter(
-		command.Command(),
+		cmd.Command(),
 		stdin.Command(),
 	)
 	otc.RegisterStorer(
@@ -39,11 +39,11 @@ func main() {
 		compress.Command(),
 	)
 
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "15:04:05"})
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
 	log.Logger = log.Level(zerolog.InfoLevel)
 	var verbose bool
 
-	r := &runner.Default{}
+	r := &runner.Runner{}
 
 	app := &cli.App{
 		Name:    "otc",
@@ -67,7 +67,7 @@ func main() {
 		},
 		Commands: otc.Commands(),
 		After: func(c *cli.Context) error {
-			m, ok := c.Context.Value(runner.K).(*runner.Default)
+			m, ok := c.Context.Value(runner.K).(*runner.Runner)
 			if !ok {
 				log.Error().Msg("Invalid runner provided")
 				return nil

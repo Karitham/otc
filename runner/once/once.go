@@ -11,10 +11,15 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-type Args struct{}
+// args are the command args
+//
+// Here there are none, but they follow the same pattern
+// as other commands for clarity
+type args struct{}
 
+// Command return once as a Runner
 func Command() *cli.Command {
-	args := &Args{}
+	a := &args{}
 
 	return &cli.Command{
 		Name:        "once",
@@ -22,14 +27,14 @@ func Command() *cli.Command {
 		Aliases:     []string{"o"},
 		Description: "run once",
 		Before: func(c *cli.Context) error {
-			runner.FromCtx(c.Context).Runner(args.Run)
+			runner.FromCtx(c.Context).Runner(a.Run)
 			return nil
 		},
 	}
 }
 
 // Run periodically runs the getter and uploads it to the storer
-func (a *Args) Run(ctx context.Context, g source.Getter, s storage.Storer) error {
+func (a *args) Run(ctx context.Context, g source.Getter, s storage.Storer) error {
 	if g == nil {
 		return errors.New("no getter provided")
 	}

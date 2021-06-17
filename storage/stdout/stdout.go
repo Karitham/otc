@@ -10,6 +10,7 @@ import (
 
 type stdout struct{}
 
+// Command returns stdout as a storer
 func Command() *cli.Command {
 	return &cli.Command{
 		Name:  "stdout",

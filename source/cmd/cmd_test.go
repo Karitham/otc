@@ -7,7 +7,7 @@ import (
 )
 
 func TestGet(t *testing.T) {
-	c := Args{
+	c := args{
 		args:    []string{"hello world"},
 		command: "echo",
 	}

@@ -11,12 +11,13 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-type Args struct {
+type args struct {
 	tick time.Duration
 }
 
+// Command return periodic as a command runner
 func Command() *cli.Command {
-	args := &Args{}
+	a := &args{}
 
 	return &cli.Command{
 		Name:        "cron",
@@ -24,7 +25,7 @@ func Command() *cli.Command {
 		Description: "run periodically",
 		Usage:       "cron <getter> <storer>",
 		Before: func(c *cli.Context) error {
-			runner.FromCtx(c.Context).Runner(args.Run)
+			runner.FromCtx(c.Context).Runner(a.Run)
 			return nil
 		},
 		Flags: []cli.Flag{
@@ -32,7 +33,7 @@ func Command() *cli.Command {
 				Name:        "schedule",
 				Aliases:     []string{"s"},
 				EnvVars:     []string{"SCHEDULE_LOOP"},
-				Destination: &args.tick,
+				Destination: &a.tick,
 				Value:       time.Minute,
 			},
 		},
@@ -40,7 +41,7 @@ func Command() *cli.Command {
 }
 
 // Run periodically runs the getter and uploads it to the storer
-func (a *Args) Run(ctx context.Context, g source.Getter, s storage.Storer) error {
+func (a *args) Run(ctx context.Context, g source.Getter, s storage.Storer) error {
 	ticker := time.NewTicker(a.tick)
 	go func() {
 		<-ctx.Done()

@@ -4,7 +4,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// OTC, where to register your new commands
+// OTC is where to register your new commands
 type OTC struct {
 	storers []*cli.Command
 	getters []*cli.Command
@@ -42,8 +42,10 @@ func (o *OTC) RegisterMiddleware(m ...Middleware) {
 
 // NestSubCommands give us the ability to use a command after the other without caring about order
 func makeCommands(runners []*cli.Command, storers []*cli.Command, getters []*cli.Command, middlewares []Middleware) []*cli.Command {
+	gettersCopy := []*cli.Command{}
+	copy(gettersCopy, getters)
 	for i := range storers {
-		storers[i].Subcommands = append(storers[i].Subcommands, getters...)
+		storers[i].Subcommands = append(storers[i].Subcommands, gettersCopy...)
 	}
 	for i := range getters {
 		getters[i].Subcommands = append(getters[i].Subcommands, storers...)

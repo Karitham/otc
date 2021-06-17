@@ -10,7 +10,7 @@ import (
 )
 
 // Client holds all that's required to upload to dropbox
-type Args struct {
+type args struct {
 	Hook *webhook.Hook
 
 	// flags
@@ -18,23 +18,24 @@ type Args struct {
 	url      string
 }
 
+// Command returns discord as a storer
 func Command() *cli.Command {
-	args := &Args{}
+	a := &args{}
 
 	return &cli.Command{
 		Name:  "discord",
 		Usage: "store in a discord channel via webhook",
 		Before: func(c *cli.Context) error {
-			runner.FromCtx(c.Context).Storer(args)
+			runner.FromCtx(c.Context).Storer(a)
 
-			args.Hook = webhook.New(args.url)
+			a.Hook = webhook.New(a.url)
 			return nil
 		},
 		Action: func(*cli.Context) error { return nil },
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "url",
-				Destination: &args.url,
+				Destination: &a.url,
 				Aliases:     []string{"u"},
 				EnvVars:     []string{"WEBHOOK_URL"},
 			},
@@ -42,7 +43,7 @@ func Command() *cli.Command {
 				Name:        "file",
 				Aliases:     []string{"f"},
 				EnvVars:     []string{"FILENAME"},
-				Destination: &args.filename,
+				Destination: &a.filename,
 				Value:       "otc_" + time.Now().Format(time.Kitchen),
 			},
 		},
@@ -50,7 +51,7 @@ func Command() *cli.Command {
 }
 
 // Store implements storage.Storer
-func (c *Args) Store(file io.Reader) error {
+func (c *args) Store(file io.Reader) error {
 	c.Hook.With(&webhook.Webhook{
 		Files: []webhook.Attachment{
 			{

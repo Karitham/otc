@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -15,24 +16,25 @@ import (
 )
 
 // check impl
-var _ source.Getter = (*Args)(nil)
+var _ source.Getter = (*args)(nil)
 
-// Args is the configuration of the getter,
-type Args struct {
+// args is the configuration of the getter,
+type args struct {
 	command string
 	args    []string
 }
 
+// Command returns cmd as a command getter
 func Command() *cli.Command {
-	args := &Args{}
+	a := &args{}
 	var s string
 
 	return &cli.Command{
 		Name:  "cmd",
-		Usage: "run a command and use stdout/stderr as the source",
+		Usage: "run a command and use stdout as the source",
 		Before: func(c *cli.Context) error {
-			args.args = strings.Fields(s)
-			runner.FromCtx(c.Context).Getter(args)
+			a.args = strings.Fields(s)
+			runner.FromCtx(c.Context).Getter(a)
 			return nil
 		},
 		Action: func(*cli.Context) error { return nil },
@@ -40,7 +42,7 @@ func Command() *cli.Command {
 			&cli.StringFlag{
 				Name:        "command",
 				Aliases:     []string{"c"},
-				Destination: &args.command,
+				Destination: &a.command,
 				Required:    true,
 			},
 			&cli.StringFlag{
@@ -53,7 +55,7 @@ func Command() *cli.Command {
 }
 
 // Get implements source.Getter to retrieve the backup from inside the container direclty
-func (a *Args) Get(ctx context.Context) (io.ReadCloser, error) {
+func (a *args) Get(ctx context.Context) (io.ReadCloser, error) {
 	log.Trace().Str("command", a.command).Strs("args", a.args).Msg("running command")
 
 	f, err := os.CreateTemp(os.TempDir(), "opc_*")
@@ -61,9 +63,11 @@ func (a *Args) Get(ctx context.Context) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("command: creating temp file %w", err)
 	}
 
+	stderrBuf := &bytes.Buffer{}
+
 	cmd := exec.CommandContext(ctx, a.command, a.args...)
-	cmd.Stderr = f
 	cmd.Stdout = f
+	cmd.Stderr = stderrBuf
 
 	cmdErr := cmd.Run()
 
@@ -73,15 +77,7 @@ func (a *Args) Get(ctx context.Context) (io.ReadCloser, error) {
 	}
 
 	if cmdErr != nil {
-		buf := make([]byte, 2048)
-		_, readErr := f.Read(buf)
-		str := strings.Trim(string(buf), "\x00")
-
-		if readErr != nil && readErr != io.EOF {
-			return nil, fmt.Errorf("pgdocker: running command %w", cmdErr)
-		}
-
-		return nil, fmt.Errorf("pgdocker: running command %w. Output: %s", cmdErr, str)
+		return nil, fmt.Errorf("cmd: running command %w. Output: %s", cmdErr, stderrBuf.String())
 	}
 	log.Trace().Msg("command ran successfully")
 

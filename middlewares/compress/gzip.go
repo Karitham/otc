@@ -1,10 +1,10 @@
 package compress
 
 import (
-	"bytes"
 	"compress/gzip"
 	"context"
 	"io"
+	"os"
 
 	"github.com/Karitham/otc/cmd"
 	"github.com/Karitham/otc/runner"
@@ -13,13 +13,17 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// Command returns a special command to use as a middleware
 func Command() cmd.Middleware {
 	g := &Gzip{}
 
 	return cmd.Middleware{
 		Func: func(bf cli.BeforeFunc) cli.BeforeFunc {
 			return func(c *cli.Context) error {
-				runner.FromCtx(c.Context).GetterWith(g.Compress(c.Context))
+				// checked after flag parsing so safe
+				if g.enabled {
+					runner.FromCtx(c.Context).GetterWith(g.Compress(c.Context))
+				}
 				return bf(c)
 			}
 		},
@@ -42,7 +46,7 @@ func Command() cmd.Middleware {
 
 // Gzip enables compression
 type Gzip struct {
-	r io.ReadCloser
+	r *os.File
 
 	// flgas
 	enabled bool
@@ -52,12 +56,13 @@ type Gzip struct {
 // Compress implements a simple flate middleware
 func (g *Gzip) Compress(ctx context.Context) func(getter source.Getter) source.Getter {
 	return func(getter source.Getter) source.Getter {
-		if !g.enabled {
-			return getter
-		}
 		log.Trace().Msg("Entered gz middleware")
 
-		buf := &bytes.Buffer{}
+		var err error
+		g.r, err = os.CreateTemp(os.TempDir(), "opc_*.gz")
+		if err != nil {
+			return getter
+		}
 
 		got, err := getter.Get(ctx)
 		if err != nil {
@@ -65,17 +70,21 @@ func (g *Gzip) Compress(ctx context.Context) func(getter source.Getter) source.G
 		}
 		defer got.Close()
 
-		gz, err := gzip.NewWriterLevel(buf, g.level)
+		gz, err := gzip.NewWriterLevel(g.r, g.level)
 		if err != nil {
 			return getter
 		}
+
 		_, err = io.Copy(gz, got)
 		if err != nil {
 			return getter
 		}
 		gz.Close()
 
-		g.r = io.NopCloser(buf)
+		_, err = g.r.Seek(0, 0)
+		if err != nil {
+			return getter
+		}
 
 		log.Trace().Msg("Left gz middleware")
 
@@ -83,6 +92,7 @@ func (g *Gzip) Compress(ctx context.Context) func(getter source.Getter) source.G
 	}
 }
 
+// Get implements storer.Getter
 func (g *Gzip) Get(context.Context) (io.ReadCloser, error) {
 	return g.r, nil
 }

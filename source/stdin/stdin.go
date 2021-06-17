@@ -11,6 +11,7 @@ import (
 
 type stdin struct{}
 
+// Command returns stdin as a command getter
 func Command() *cli.Command {
 	return &cli.Command{
 		Name:  "stdin",
@@ -19,7 +20,8 @@ func Command() *cli.Command {
 			runner.FromCtx(c.Context).Getter(stdin{})
 			return nil
 		},
-		Action: func(*cli.Context) error { return nil },
+		Aliases: []string{"-"},
+		Action:  func(*cli.Context) error { return nil },
 	}
 }
 

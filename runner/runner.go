@@ -2,70 +2,78 @@ package runner
 
 import (
 	"context"
+	"errors"
 	"io"
+	"os"
 
 	"github.com/Karitham/otc/source"
 	"github.com/Karitham/otc/storage"
 )
 
-type CtxKey struct{}
+// ctxKey is used to build a unique context key
+type ctxKey struct{}
 
-var K CtxKey = CtxKey{}
+// K is a unique ctx key
+var K ctxKey = ctxKey{}
 
-type RunnerFunc = func(context.Context, source.Getter, storage.Storer) error
-
+// Aliases to simplify types
 type (
+	// runnerFunc is a simple alias for a runner function
+	runnerFunc = func(context.Context, source.Getter, storage.Storer) error
+	// gMiddle is a getter middleware
 	gMiddle = func(source.Getter) source.Getter
+	// sMiddle is a storer middleware
 	sMiddle = func(storage.Storer) storage.Storer
 )
 
-// Default is a default runner.
+// Runner is a default runner.
 // It's used to wrapper runners inside middlewares
-type Default struct {
+type Runner struct {
 	getter       source.Getter
 	storer       storage.Storer
-	runner       RunnerFunc
+	runner       runnerFunc
 	gMiddlewares []gMiddle
 	sMiddlewares []sMiddle
 }
 
 // Runner sets the default runner
-func (d *Default) Runner(r RunnerFunc) *Default {
+func (d *Runner) Runner(r runnerFunc) *Runner {
 	d.runner = r
 	return d
 }
 
 // Storer sets the default storer
-func (d *Default) Storer(s storage.Storer) *Default {
+func (d *Runner) Storer(s storage.Storer) *Runner {
 	d.storer = s
 	return d
 }
 
 // Getter sets the default getter
-func (d *Default) Getter(g source.Getter) *Default {
+func (d *Runner) Getter(g source.Getter) *Runner {
 	d.getter = g
 	return d
 }
 
-// With adds a middleware at the end of the chain
-func (d *Default) GetterWith(m ...gMiddle) *Default {
+// GetterWith adds a middleware at the end of the getter chain
+func (d *Runner) GetterWith(m ...gMiddle) *Runner {
 	d.gMiddlewares = append(d.gMiddlewares, m...)
 	return d
 }
 
-// With adds a middleware at the end of the chain
-func (d *Default) StorerWith(m ...sMiddle) *Default {
+// StorerWith adds a middleware at the end of the storer chain
+func (d *Runner) StorerWith(m ...sMiddle) *Runner {
 	d.sMiddlewares = append(d.sMiddlewares, m...)
 	return d
 }
 
 // Middlewares returns the middlewares
-func (d *Default) Middlewares() ([]gMiddle, []sMiddle) {
+func (d *Runner) Middlewares() ([]gMiddle, []sMiddle) {
 	return d.gMiddlewares, d.sMiddlewares
 }
 
-func FromCtx(ctx context.Context) *Default {
-	d, ok := ctx.Value(K).(*Default)
+// FromCtx returns a DefaultRunner from a context
+func FromCtx(ctx context.Context) *Runner {
+	d, ok := ctx.Value(K).(*Runner)
 	if !ok {
 		return nil
 	}
@@ -73,7 +81,7 @@ func FromCtx(ctx context.Context) *Default {
 }
 
 // Run applies the middlewares then runs the command
-func (d *Default) Run(ctx context.Context) error {
+func (d *Runner) Run(ctx context.Context) error {
 	if d.runner == nil {
 		return nil
 	}
@@ -82,7 +90,10 @@ func (d *Default) Run(ctx context.Context) error {
 }
 
 // Get implements the source.Getter interface to be able to pass and apply middlewares at each call
-func (d *Default) Get(ctx context.Context) (io.ReadCloser, error) {
+func (d *Runner) Get(ctx context.Context) (io.ReadCloser, error) {
+	if d.getter == nil {
+		return nil, errors.New("no source provided")
+	}
 	if len(d.gMiddlewares) == 0 {
 		return d.getter.Get(ctx)
 	}
@@ -96,7 +107,11 @@ func (d *Default) Get(ctx context.Context) (io.ReadCloser, error) {
 }
 
 // Store implements the store.Storer interface to be able to pass and apply middlewares at each call
-func (d *Default) Store(r io.Reader) error {
+func (d *Runner) Store(r io.Reader) error {
+	if d.storer == nil {
+		_, err := io.Copy(os.Stdout, r)
+		return err
+	}
 	if len(d.sMiddlewares) == 0 {
 		return d.storer.Store(r)
 	}

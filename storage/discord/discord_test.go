@@ -19,17 +19,17 @@ func TestClient_Store(t *testing.T) {
 		Hook     *webhook.Hook
 		filename string
 	}
-	type args struct {
+	type ags struct {
 		file io.Reader
 	}
 	tests := []struct {
-		args    args
+		args    ags
 		fields  fields
 		name    string
 		wantErr bool
 	}{
 		{
-			args: args{
+			args: ags{
 				file: bytes.NewBuffer([]byte("hello world")),
 			},
 			fields: fields{
@@ -42,7 +42,7 @@ func TestClient_Store(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Args{
+			c := &args{
 				Hook:     tt.fields.Hook,
 				filename: tt.fields.filename,
 			}

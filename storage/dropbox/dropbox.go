@@ -11,8 +11,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// Args holds all that's required to upload to dropbox
-type Args struct {
+// args holds all that's required to upload to dropbox
+type args struct {
 	DP *dropy.Client
 
 	// flags
@@ -21,24 +21,25 @@ type Args struct {
 	timeout  time.Duration
 }
 
+// Command returns dropbox as a storer
 func Command() *cli.Command {
-	args := &Args{}
+	a := &args{}
 
 	return &cli.Command{
 		Name:  "dropbox",
 		Usage: "store in dropbox",
 		Before: func(c *cli.Context) error {
-			args.DP = dropy.New(
+			a.DP = dropy.New(
 				dropbox.New(
 					&dropbox.Config{
 						HTTPClient: &http.Client{
-							Timeout: args.timeout,
-						}, AccessToken: args.token,
+							Timeout: a.timeout,
+						}, AccessToken: a.token,
 					},
 				),
 			)
 
-			runner.FromCtx(c.Context).Storer(args)
+			runner.FromCtx(c.Context).Storer(a)
 			return nil
 		},
 		Action: func(*cli.Context) error { return nil },
@@ -48,25 +49,25 @@ func Command() *cli.Command {
 				Aliases:     []string{"f"},
 				EnvVars:     []string{"DROPBOX_FILENAME"},
 				DefaultText: "otc_" + time.Now().Format(time.Kitchen),
-				Destination: &args.filename,
+				Destination: &a.filename,
 			},
 			&cli.StringFlag{
 				Name:        "token",
 				Aliases:     []string{"t"},
 				EnvVars:     []string{"DROPBOX_TOKEN"},
-				Destination: &args.token,
+				Destination: &a.token,
 			},
 			&cli.DurationFlag{
 				Name:        "timeout",
 				Value:       5 * time.Minute,
-				Destination: &args.timeout,
+				Destination: &a.timeout,
 			},
 		},
 	}
 }
 
 // Store implements storage.Storer
-func (a *Args) Store(file io.Reader) error {
+func (a *args) Store(file io.Reader) error {
 	err := a.DP.Upload("/"+a.filename, file)
 	if err != nil {
 		return err
